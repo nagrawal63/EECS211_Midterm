@@ -20,6 +20,7 @@ extern struct proc_time proc_times[32];
 //   struct proc_times *next;
 // };
 void proc_times_init();
-struct proc_time* get_proc_time(char * p_name);
+struct proc_time* get_proc_time(const char * p_name);
 void print_proc_times(void);
+void print_proc_time(const struct proc_time *proc_t);
 

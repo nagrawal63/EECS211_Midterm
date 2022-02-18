@@ -14,26 +14,37 @@ void proc_times_init() {
   }
 }
 
-struct proc_time* get_proc_time(char * p_name) {
-  if (strncmp(p_name, "init", 16) == 0 || strncmp(p_name, "initcode", 16) == 0) {
-    return NULL;
-  }
-  struct proc_time * free_proc_time = NULL;
-  for (int i = 0; i < PROC_TIMES; i++) {
-    if ((strncmp(p_name, proc_times[i].p_name, 16) == 0) && (!proc_times[i].proc_done)) {
-      return proc_times + i; 
-    } else if (proc_times[i].p_name[0] == '\0') {
-      free_proc_time = proc_times + i;
+struct proc_time* get_proc_time(const char * p_name) {
+    // printf("In get proc time start\n");
+    if (strncmp(p_name, "init", 16) == 0 || strncmp(p_name, "initcode", 16) == 0) {
+    //   printf("returning from init and initcode\n");
+        return NULL;
     }
-  }
-  return free_proc_time;
+//   struct proc_time * free_proc_time = NULL;
+// printf("In get proc time\n");
+// print_proc_times();
+    for (int i = 0; i < PROC_TIMES; i++) {
+        if ((strncmp(p_name, proc_times[i].p_name, 16) == 0)) {
+            // printf("Matched |%s| with proc with name %s\n", p_name, proc_times[i].p_name);
+            return proc_times + i; 
+        } else if (proc_times[i].p_name[0] == '\0') {
+            printf("Returning the index to create new proc_time\n");
+            return proc_times + i;
+        }
+    }
+  return NULL;
+}
+
+void print_proc_time(const struct proc_time *proc_t) {
+    printf("Process name: %s, delta: %d, start_time: %d, done: %d\n",
+             proc_t->p_name, proc_t->delta, proc_t->start_time, proc_t->proc_done);
 }
 
 void print_proc_times(void) {
     printf("---------------------------------\n");
     for(int i = 0; i < PROC_TIMES; i++) {
         if(proc_times[i].p_name[0] != '\0')
-            printf("Process name: %s, time: %d\n", proc_times[i].p_name, proc_times[i].delta);
+            print_proc_time(proc_times + i);
     }
     printf("---------------------------------\n");
 }

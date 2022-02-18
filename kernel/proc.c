@@ -464,15 +464,18 @@ scheduler(void)
         printf("Switching to process: %s\n", p->name);
         uint64 time = r_time();
         printf("Going to process at time: %d \n", time);
-        struct proc_time *procT = get_proc_time(p->name);
-        if(procT && procT->p_name[0] == '\0') {
-          // set start time for new process
-          strncpy(procT->p_name, p->name, 16);
-          procT->start_time = time;
-        } else if (procT && procT->start_time != 0) {
-          // process yielded, add to delta and reset start time
-          procT->delta += time - procT->start_time;
-          procT->start_time = time;
+        struct proc_time *procT;
+        if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
+          procT = get_proc_time(p->name);
+          if(procT && procT->p_name[0] == '\0') {
+            // set start time for new process
+            strncpy(procT->p_name, p->name, 16);
+            procT->start_time = time;
+          } else if (procT && procT->start_time != 0) {
+            // process yielded, add to delta and reset start time
+            procT->delta += time - procT->start_time;
+            procT->start_time = time;
+          }
         }
 
         swtch(&c->context, &p->context);
@@ -481,9 +484,11 @@ scheduler(void)
         print_proc_times();
         procT = get_proc_time(p->name);
         if (procT) {
+          printf("Inside process\n");
+          print_proc_time(procT);
           procT->delta += end_time - procT->start_time;
           procT->proc_done = true;
-          printf("Process %s runtime: %d \n", procT->p_name, procT->delta);
+          printf("Process |%s| runtime: %d \n", p->name, procT->delta);
         }
         else {
           printf("Didn't find any process to return from\n");
