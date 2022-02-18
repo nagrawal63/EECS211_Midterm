@@ -444,6 +444,8 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   
+  proc_times_init();
+  
   c->proc = 0;
   for(;;){
     // printf("In scheduler\n");
@@ -465,7 +467,7 @@ scheduler(void)
         struct proc_time *procT = get_proc_time(p->name);
         if(procT && procT->p_name[0] == '\0') {
           // set start time for new process
-          strncpy(p->name, procT->p_name, 16);
+          strncpy(procT->p_name, p->name, 16);
           procT->start_time = time;
         } else if (procT && procT->start_time != 0) {
           // process yielded, add to delta and reset start time
@@ -476,14 +478,18 @@ scheduler(void)
         swtch(&c->context, &p->context);
 
         uint64 end_time = r_time();
+        print_proc_times();
         procT = get_proc_time(p->name);
         if (procT) {
           procT->delta += end_time - procT->start_time;
           procT->proc_done = true;
           printf("Process %s runtime: %d \n", procT->p_name, procT->delta);
         }
+        else {
+          printf("Didn't find any process to return from\n");
+        }
 
-        printf("Going to process at time: %d \n", time);
+        // printf("Going to process at time: %d \n", time);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.

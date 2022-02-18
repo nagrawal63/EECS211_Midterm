@@ -1,16 +1,16 @@
 #pragma once
 #include "types.h"
-#include <stdbool.h>
+#include "defs.h"
 
 #define PROC_TIMES  16
-#define RUNNING     true
-#define DONE        false
+#define true 1
+#define false 0
 
 struct proc_time {
   uint64 start_time;
   uint64 delta;
   char p_name[PROC_TIMES];
-  bool proc_done;
+  uint8 proc_done;
 };
 
 extern struct proc_time proc_times[32];
