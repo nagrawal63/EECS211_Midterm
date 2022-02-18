@@ -5,6 +5,9 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "debug.h"
+
+// #include "string.h"
 
 struct cpu cpus[NCPU];
 
@@ -374,6 +377,7 @@ exit(int status)
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
+  printf("Calling sched from exit\n");
   sched();
   panic("zombie exit");
 }
@@ -442,6 +446,7 @@ scheduler(void)
   
   c->proc = 0;
   for(;;){
+    // printf("In scheduler\n");
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
@@ -453,7 +458,32 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        printf("Switching to process: %s\n", p->name);
+        uint64 time = r_time();
+        printf("Going to process at time: %d \n", time);
+        struct proc_time *procT = get_proc_time(p->name);
+        if(procT && procT->p_name[0] == '\0') {
+          // set start time for new process
+          strncpy(p->name, procT->p_name, 16);
+          procT->start_time = time;
+        } else if (procT && procT->start_time != 0) {
+          // process yielded, add to delta and reset start time
+          procT->delta += time - procT->start_time;
+          procT->start_time = time;
+        }
+
         swtch(&c->context, &p->context);
+
+        uint64 end_time = r_time();
+        procT = get_proc_time(p->name);
+        if (procT) {
+          procT->delta += end_time - procT->start_time;
+          procT->proc_done = true;
+          printf("Process %s runtime: %d \n", procT->p_name, procT->delta);
+        }
+
+        printf("Going to process at time: %d \n", time);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -487,6 +517,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
+  printf("Coming from process: %s\n", p->name);
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -498,6 +529,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  printf("Calling sched from yield\n");
   sched();
   release(&p->lock);
 }
@@ -544,6 +576,7 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
+  printf("Calling sched from sleep\n");
   sched();
 
   // Tidy up.
