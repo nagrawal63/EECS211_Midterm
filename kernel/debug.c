@@ -11,6 +11,8 @@ void proc_times_init() {
     proc_times[i].start_time = 0;
     proc_times[i].delta = 0;
     proc_times[i].proc_done = 0;
+    proc_times[i].num_runs = 0;
+    proc_times[i].curr_delta = 0;
   }
 }
 
@@ -36,8 +38,8 @@ struct proc_time* get_proc_time(const char * p_name) {
 }
 
 void print_proc_time(const struct proc_time *proc_t) {
-    printf("Process name: %s, delta: %d, start_time: %d, done: %d\n",
-             proc_t->p_name, proc_t->delta, proc_t->start_time, proc_t->proc_done);
+    printf("Process name: %s, delta: %d, curr_delta: %d, start_time: %d, num_runs: %d, done: %d\n",
+             proc_t->p_name, proc_t->delta, proc_t->curr_delta, proc_t->start_time, proc_t->num_runs, proc_t->proc_done);
 }
 
 void print_proc_times(void) {

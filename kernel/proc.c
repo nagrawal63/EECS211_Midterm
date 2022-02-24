@@ -344,6 +344,17 @@ exit(int status)
 {
   struct proc *p = myproc();
 
+  /* Update proc_time variable for the process */
+  struct proc_time *procT = get_proc_time(p->name);
+  if(procT && procT->p_name[0] != '\0') {
+    procT->proc_done = true;
+    procT->num_runs++;
+    // procT->start_time = 0;
+  }
+  // else {
+  //   panic("process exiting but not in proc_time list\n");
+  // }
+
   if(p == initproc)
     panic("init exiting");
 
@@ -377,7 +388,7 @@ exit(int status)
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
-  printf("Calling sched from exit\n");
+  printf("Calling sched from exit from process %s with pid: %d\n", p->name, p->pid);
   sched();
   panic("zombie exit");
 }
@@ -462,37 +473,61 @@ scheduler(void)
         c->proc = p;
 
         printf("Switching to process: %s\n", p->name);
-        uint64 time = r_time();
-        printf("Going to process at time: %d \n", time);
-        struct proc_time *procT;
-        if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
-          procT = get_proc_time(p->name);
-          if(procT && procT->p_name[0] == '\0') {
-            // set start time for new process
-            strncpy(procT->p_name, p->name, 16);
-            procT->start_time = time;
-          } else if (procT && procT->start_time != 0) {
-            // process yielded, add to delta and reset start time
-            procT->delta += time - procT->start_time;
-            procT->start_time = time;
-          }
-        }
+        procdump();
+        /* Uncomment line 478 to 503 to have the proc_times functionality back */
+        // uint64 time = r_time();
+        // struct proc_time *procT;
+        // if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
+        //   procT = get_proc_time(p->name);
+
+        //   // set start time for new process
+        //   if(procT && procT->p_name[0] == '\0') {
+        //     strncpy(procT->p_name, p->name, 16);
+        //     procT->start_time = time;
+        //   } 
+        //   // process yielded, add to delta and reset start time
+        //   else if (procT && procT->start_time != 0) {
+        //     //because after yielding as well, the scheduler returns back to start of for loop of scheduler
+        //     procT->curr_delta += time - procT->start_time;
+        //     procT->start_time = time;
+        //   }
+        //   //Re-running a previously exited process
+        //   else if(procT && procT->start_time == 0) {
+        //     /* Reset proc_done to 0 if the process was called earlier and it exited */
+        //     if(procT->proc_done){
+        //       procT->proc_done = 0;
+        //     }
+        //     procT->start_time = time;
+        //   }
+        // }
+        // printf("Going to process at time: %d \n", time);
 
         swtch(&c->context, &p->context);
 
-        uint64 end_time = r_time();
-        print_proc_times();
-        procT = get_proc_time(p->name);
-        if (procT) {
-          printf("Inside process\n");
-          print_proc_time(procT);
-          procT->delta += end_time - procT->start_time;
-          procT->proc_done = true;
-          printf("Process |%s| runtime: %d \n", p->name, procT->delta);
-        }
-        else {
-          printf("Didn't find any process to return from\n");
-        }
+        printf("After switch in scheduler\n");
+
+        /* Uncomment lines 510 to 532 to have the proc_times functionality back */
+        // uint64 end_time = r_time();
+        // if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
+        //   procT = get_proc_time(p->name);
+        //   if (procT) {
+        //     // printf("Inside process\n");
+        //     // print_proc_time(procT);
+        //     procT->curr_delta += end_time - procT->start_time;
+        //     if(procT->proc_done) {
+        //       /* Calculate average */
+        //       procT->delta = (procT->curr_delta + procT->delta * (procT->num_runs - 1))/procT->num_runs;
+        //       procT->curr_delta = 0;
+        //       procT->start_time = 0;
+        //     }
+        //     // procT->proc_done = true;
+        //     printf("Process |%s| runtime: %d \n", p->name, procT->delta);
+        //     print_proc_times();
+        //   }
+        //   else {
+        //     printf("Didn't find any process to return from\n");
+        //   }
+        // }
 
         // printf("Going to process at time: %d \n", time);
 
@@ -540,7 +575,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printf("Calling sched from yield\n");
+  printf("Calling sched from yield from process %s with pid: %d\n", p->name, p->pid);
   sched();
   release(&p->lock);
 }
@@ -584,10 +619,11 @@ sleep(void *chan, struct spinlock *lk)
   release(lk);
 
   // Go to sleep.
+  printf("Setting %s to sleep\n", p->name);
   p->chan = chan;
   p->state = SLEEPING;
 
-  printf("Calling sched from sleep\n");
+  printf("Calling sched from sleep from process %s with pid: %d\n", p->name, p->pid);
   sched();
 
   // Tidy up.
@@ -609,6 +645,7 @@ wakeup(void *chan)
     if(p != myproc()){
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
+        printf("Waking up %s in wakeup()\n", p->name);
         p->state = RUNNABLE;
       }
       release(&p->lock);

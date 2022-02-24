@@ -11,6 +11,8 @@ struct proc_time {
   uint64 delta;
   char p_name[PROC_TIMES];
   uint8 proc_done;
+  uint32 num_runs;
+  uint64 curr_delta;
 };
 
 extern struct proc_time proc_times[32];
