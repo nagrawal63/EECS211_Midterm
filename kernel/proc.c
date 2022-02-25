@@ -480,7 +480,6 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-
         // profiling logic
         struct proc_time *proc_time = get_proc_time(p->name);
         // set start time for new process
@@ -501,6 +500,7 @@ scheduler(void)
             timer_scratch[0][4] = 1000 * 1000;
           }
         }
+
 
         swtch(&c->context, &p->context);
 
@@ -568,7 +568,11 @@ yield(void)
       panic("Process yielding when last process is done");
     }
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
+
+    //Counting yields
+    printf("run: %d\n", proc_time->num_runs);
   }
+
 
   sched();
   release(&p->lock);

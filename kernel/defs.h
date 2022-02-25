@@ -1,6 +1,11 @@
 #pragma once
 
 #include "riscv.h"
+#include "param.h"
+
+extern uint64 timer_scratch[NCPU][5];
+
+#define DEFAULT_INTERVAL 1000000
 
 struct buf;
 struct context;
