@@ -35,7 +35,7 @@ struct spinlock wait_lock;
 void
 proc_mapstacks(pagetable_t kpgtbl) {
   struct proc *p;
-  
+
   for(p = proc; p < &proc[NPROC]; p++) {
     char *pa = kalloc();
     if(pa == 0)
@@ -50,7 +50,7 @@ void
 procinit(void)
 {
   struct proc *p;
-  
+
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -91,7 +91,7 @@ myproc(void) {
 int
 allocpid() {
   int pid;
-  
+
   acquire(&pid_lock);
   pid = nextpid;
   nextpid = nextpid + 1;
@@ -232,7 +232,7 @@ userinit(void)
 
   p = allocproc();
   initproc = p;
-  
+
   // allocate one user page and copy init's instructions
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
@@ -345,15 +345,21 @@ exit(int status)
   struct proc *p = myproc();
 
   /* Update proc_time variable for the process */
-  struct proc_time *procT = get_proc_time(p->name);
-  if(procT && procT->p_name[0] != '\0') {
-    procT->proc_done = true;
-    procT->num_runs++;
-    // procT->start_time = 0;
+  struct proc_time *proc_time = get_proc_time(p->name);
+  if(proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid == p->pid) {
+    // update avg_exec_time
+    uint32 cur_run = proc_time->num_runs % EXEC_TIMES;
+    proc_time->exec_times[cur_run] += r_time() - proc_time->start_time;
+    if (!proc_time->num_runs)
+      proc_time->avg_exec_time = proc_time->exec_times[cur_run];
+    else
+      proc_time->avg_exec_time = (proc_time->exec_times[cur_run] + proc_time->avg_exec_time) / 2;
+    proc_time->parent_pid = 0;
+    proc_time->done = true;
+    proc_time->num_runs++;
+  } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
+    proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
-  // else {
-  //   panic("process exiting but not in proc_time list\n");
-  // }
 
   if(p == initproc)
     panic("init exiting");
@@ -379,7 +385,7 @@ exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  
+
   acquire(&p->lock);
 
   p->xstate = status;
@@ -388,7 +394,10 @@ exit(int status)
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
+
+  #ifdef VPRINT
   printf("Calling sched from exit from process %s with pid: %d\n", p->name, p->pid);
+  #endif
   sched();
   panic("zombie exit");
 }
@@ -436,7 +445,7 @@ wait(uint64 addr)
       release(&wait_lock);
       return -1;
     }
-    
+
     // Wait for a child to exit.
     sleep(p, &wait_lock);  //DOC: wait-sleep
   }
@@ -454,9 +463,7 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
-  proc_times_init();
-  
+
   c->proc = 0;
   for(;;){
     // printf("In scheduler\n");
@@ -472,62 +479,19 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-        printf("Switching to process: %s\n", p->name);
-        procdump();
-        /* Uncomment line 478 to 503 to have the proc_times functionality back */
-        // uint64 time = r_time();
-        // struct proc_time *procT;
-        // if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
-        //   procT = get_proc_time(p->name);
 
-        //   // set start time for new process
-        //   if(procT && procT->p_name[0] == '\0') {
-        //     strncpy(procT->p_name, p->name, 16);
-        //     procT->start_time = time;
-        //   } 
-        //   // process yielded, add to delta and reset start time
-        //   else if (procT && procT->start_time != 0) {
-        //     //because after yielding as well, the scheduler returns back to start of for loop of scheduler
-        //     procT->curr_delta += time - procT->start_time;
-        //     procT->start_time = time;
-        //   }
-        //   //Re-running a previously exited process
-        //   else if(procT && procT->start_time == 0) {
-        //     /* Reset proc_done to 0 if the process was called earlier and it exited */
-        //     if(procT->proc_done){
-        //       procT->proc_done = 0;
-        //     }
-        //     procT->start_time = time;
-        //   }
-        // }
-        // printf("Going to process at time: %d \n", time);
+        // profiling logic
+        struct proc_time *proc_time = get_proc_time(p->name);
+        // set start time for new process
+        if(proc_time && proc_time->p_name[0] != '\0') {
+          // TODO: Remove when the map is implemented
+          if (proc_time->done) {
+            panic("Process restarted when process is done");
+          }
+          proc_time->start_time = r_time();
+        }
 
         swtch(&c->context, &p->context);
-
-        printf("After switch in scheduler\n");
-
-        /* Uncomment lines 510 to 532 to have the proc_times functionality back */
-        // uint64 end_time = r_time();
-        // if(!(strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0)) {
-        //   procT = get_proc_time(p->name);
-        //   if (procT) {
-        //     // printf("Inside process\n");
-        //     // print_proc_time(procT);
-        //     procT->curr_delta += end_time - procT->start_time;
-        //     if(procT->proc_done) {
-        //       /* Calculate average */
-        //       procT->delta = (procT->curr_delta + procT->delta * (procT->num_runs - 1))/procT->num_runs;
-        //       procT->curr_delta = 0;
-        //       procT->start_time = 0;
-        //     }
-        //     // procT->proc_done = true;
-        //     printf("Process |%s| runtime: %d \n", p->name, procT->delta);
-        //     print_proc_times();
-        //   }
-        //   else {
-        //     printf("Didn't find any process to return from\n");
-        //   }
-        // }
 
         // printf("Going to process at time: %d \n", time);
 
@@ -563,7 +527,9 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
+  #ifdef VPRINT
   printf("Coming from process: %s\n", p->name);
+  #endif
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -575,7 +541,22 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+
+  #ifdef VPRINT
   printf("Calling sched from yield from process %s with pid: %d\n", p->name, p->pid);
+  #endif
+
+  // profiling logic
+  struct proc_time *proc_time = get_proc_time(p->name);
+  // set start time for new process
+  if (proc_time && proc_time->p_name[0] != '\0') {
+    // TODO: Remove when the map is implemented
+    if (proc_time->done) {
+      panic("Process yielding when last process is done");
+    }
+    proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
+  }
+
   sched();
   release(&p->lock);
 }
@@ -607,7 +588,7 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be
@@ -619,11 +600,15 @@ sleep(void *chan, struct spinlock *lk)
   release(lk);
 
   // Go to sleep.
+  #ifdef VPRINT
   printf("Setting %s to sleep\n", p->name);
+  #endif
   p->chan = chan;
   p->state = SLEEPING;
 
+  #ifdef VPRINT
   printf("Calling sched from sleep from process %s with pid: %d\n", p->name, p->pid);
+  #endif
   sched();
 
   // Tidy up.
@@ -645,7 +630,9 @@ wakeup(void *chan)
     if(p != myproc()){
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
+        #ifdef VPRINT
         printf("Waking up %s in wakeup()\n", p->name);
+        #endif
         p->state = RUNNABLE;
       }
       release(&p->lock);

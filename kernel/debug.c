@@ -3,18 +3,7 @@
 
 #define NULL 0
 
-struct proc_time proc_times[32];
-
-void proc_times_init() {
-  for (int i = 0; i < PROC_TIMES; i++) {
-    proc_times[i].p_name[0] = '\0';
-    proc_times[i].start_time = 0;
-    proc_times[i].delta = 0;
-    proc_times[i].proc_done = 0;
-    proc_times[i].num_runs = 0;
-    proc_times[i].curr_delta = 0;
-  }
-}
+struct proc_time proc_times[PROC_TIMES_SIZE];
 
 struct proc_time* get_proc_time(const char * p_name) {
     // printf("In get proc time start\n");
@@ -25,12 +14,14 @@ struct proc_time* get_proc_time(const char * p_name) {
 //   struct proc_time * free_proc_time = NULL;
 // printf("In get proc time\n");
 // print_proc_times();
-    for (int i = 0; i < PROC_TIMES; i++) {
+    for (int i = 0; i < PROC_TIMES_SIZE; i++) {
         if ((strncmp(p_name, proc_times[i].p_name, 16) == 0)) {
             // printf("Matched |%s| with proc with name %s\n", p_name, proc_times[i].p_name);
-            return proc_times + i; 
+            return proc_times + i;
         } else if (proc_times[i].p_name[0] == '\0') {
+            #ifdef VPRINT
             printf("Returning the index to create new proc_time\n");
+            #endif
             return proc_times + i;
         }
     }
@@ -38,13 +29,16 @@ struct proc_time* get_proc_time(const char * p_name) {
 }
 
 void print_proc_time(const struct proc_time *proc_t) {
-    printf("Process name: %s, delta: %d, curr_delta: %d, start_time: %d, num_runs: %d, done: %d\n",
-             proc_t->p_name, proc_t->delta, proc_t->curr_delta, proc_t->start_time, proc_t->num_runs, proc_t->proc_done);
+    printf("p_name: %s ", proc_t->p_name);
+    printf("avg_exec_time: %s ", proc_t->avg_exec_time);
+    printf("start_time: %s ", proc_t->start_time);
+    printf("num_runs: %d ", proc_t->num_runs);
+    printf("done: %d\n", proc_t->done);
 }
 
 void print_proc_times(void) {
     printf("---------------------------------\n");
-    for(int i = 0; i < PROC_TIMES; i++) {
+    for(int i = 0; i < PROC_TIMES_SIZE; i++) {
         if(proc_times[i].p_name[0] != '\0')
             print_proc_time(proc_times + i);
     }
