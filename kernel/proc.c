@@ -479,17 +479,20 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-
         // profiling logic
         struct proc_time *proc_time = get_proc_time(p->name);
         // set start time for new process
         if(proc_time && proc_time->p_name[0] != '\0') {
-          // TODO: Remove when the map is implemented
           if (proc_time->done) {
             panic("Process restarted when process is done");
           }
           proc_time->start_time = r_time();
+          uint64 interval = (proc_time->avg_exec_time * 21) / 20;
+          *(uint64 *)(timer_scratch[r_mhartid()][4]) = interval;
+        } else {
+          *(uint64 *)(timer_scratch[r_mhartid()][4]) = DEFAULT_INTERVAL;
         }
+
 
         swtch(&c->context, &p->context);
 
@@ -555,7 +558,11 @@ yield(void)
       panic("Process yielding when last process is done");
     }
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
+
+    //Counting yields
+    printf("run: %d\n", proc_time->num_runs);
   }
+
 
   sched();
   release(&p->lock);
