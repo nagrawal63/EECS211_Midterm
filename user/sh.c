@@ -66,7 +66,7 @@ runcmd(struct cmd *cmd)
 
   if(cmd == 0)
     exit(1);
-
+  // printf("cmd->type %d\n", cmd->type);
   switch(cmd->type){
   default:
     panic("runcmd");

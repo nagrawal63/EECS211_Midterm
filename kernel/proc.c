@@ -360,6 +360,7 @@ exit(int status)
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
+  // printf("process %s exited with done status as %d\n", p->name, proc_time->done);
 
   if(p == initproc)
     panic("init exiting");
@@ -485,10 +486,20 @@ scheduler(void)
         // set start time for new process
         if(proc_time && proc_time->p_name[0] != '\0') {
           // TODO: Remove when the map is implemented
-          if (proc_time->done) {
+          if (proc_time->done && proc_time->parent_pid == p->pid) {
             panic("Process restarted when process is done");
           }
           proc_time->start_time = r_time();
+          // #ifdef VPRINT
+          // uint64 test = 101321;
+          // printf("Setting interval to %p for process %s\n", proc_time->avg_exec_time/2, proc_time->p_name);
+          // #endif
+          if(proc_time->avg_exec_time != 0) {
+            timer_scratch[0][4] = proc_time->avg_exec_time/2;
+          }
+          else {
+            timer_scratch[0][4] = 1000 * 1000;
+          }
         }
 
         swtch(&c->context, &p->context);
@@ -547,11 +558,13 @@ yield(void)
   #endif
 
   // profiling logic
+  printf("process %s with pid %d yielded and interval was %p\n", p->name, p->pid, timer_scratch[0][4]);
   struct proc_time *proc_time = get_proc_time(p->name);
   // set start time for new process
   if (proc_time && proc_time->p_name[0] != '\0') {
     // TODO: Remove when the map is implemented
-    if (proc_time->done) {
+    if (proc_time->done && proc_time->parent_pid == p->pid) {
+      printf("Panicing process %s with pid %d\n", proc_time->p_name, p->pid);
       panic("Process yielding when last process is done");
     }
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;

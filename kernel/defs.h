@@ -13,6 +13,8 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+extern uint64 timer_scratch[1][5];
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
