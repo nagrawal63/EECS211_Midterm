@@ -24,7 +24,14 @@ struct proc_time {
   bool done;
 };
 
+struct yield_count {
+  char p_name[PROC_NAME_SIZE];
+  uint32 num_yields;
+  uint64 interval;
 
+};
+
+extern struct yield_count proc_yield_counts[32];
 extern struct proc_time proc_times[32];
 
 struct proc_time* get_proc_time(const char * p_name);
