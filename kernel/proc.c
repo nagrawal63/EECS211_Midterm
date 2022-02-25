@@ -538,6 +538,7 @@ sched(void)
 void
 yield(void)
 {
+  printf("\nin Yield\n");
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
@@ -556,6 +557,22 @@ yield(void)
     }
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
+
+  //Counting Yields 
+  struct yield_count* yield_count = get_yield_count(p->name);
+  printf("\n%s",p->name);
+  if (yield_count && yield_count->p_name[0] != '\0'){
+    yield_count->num_yields += 1; 
+    set_interval(yield_count);
+    printf("Process name: %s\n",yield_count->p_name);
+    printf("NUmber of Yields: %d\n",yield_count->num_yields);
+    printf("Interval Value: %d\n",yield_count->interval);
+  }
+  else {
+    strncpy(yield_count->p_name, p->name, 16); 
+    yield_count->num_yields=1; 
+    yield_count->interval=REGINTERVAL;
+    }
 
   sched();
   release(&p->lock);

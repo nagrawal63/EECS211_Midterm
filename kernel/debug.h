@@ -7,6 +7,10 @@
 #define EXEC_TIMES 10
 #define true 1
 #define false 0
+#define REGINTERVAL 1000000
+#define LARGEINTERVAL 2000000
+#define SMALLINTERVAL 500000
+
 
 // #define VPRINT 0
 
@@ -33,6 +37,9 @@ struct yield_count {
 
 extern struct yield_count proc_yield_counts[32];
 extern struct proc_time proc_times[32];
+
+struct yield_count* get_yield_count (const char * p_name);
+void set_interval(struct yield_count* p);
 
 struct proc_time* get_proc_time(const char * p_name);
 void print_proc_times(void);
