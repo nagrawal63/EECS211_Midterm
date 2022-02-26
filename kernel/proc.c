@@ -376,7 +376,7 @@ exit(int status)
     }
   }
 
-  if(!strncmp(p->name, fname, 2)) {
+  if(!strncmp(p->name, fname, 2) && proc_time->parent_pid == p->pid) {
     printf("Yield count is %p\n", yield_count_test);
   }
 
