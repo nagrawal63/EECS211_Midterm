@@ -15,6 +15,8 @@ typedef uint8 bool;
 // TODO: Create a map for PID -> exec_time index in case a process yields and a new process starts
 struct proc_time {
   char p_name[PROC_NAME_SIZE];
+  uint64 og_start_time;
+  uint64 total_exec_time;
   uint64 start_time;
   uint64 exec_times[EXEC_TIMES];
   uint64 avg_exec_time;

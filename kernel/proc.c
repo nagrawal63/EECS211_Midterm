@@ -359,10 +359,12 @@ exit(int status)
     proc_time->parent_pid = 0;
     proc_time->done = true;
     proc_time->num_runs++;
+    proc_time->total_exec_time = r_time() - proc_time->og_start_time;
+    printf("Total execution time of this run of %s is %x\n", proc_time->p_name, proc_time->total_exec_time);
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
-  // printf("process %s exited with done status as %d\n", p->name, proc_time->done);
+  printf("process %s exited with done status as %d and avg_exec_time is %x\n", p->name, proc_time->done, proc_time->avg_exec_time);
 
   if(p == initproc)
     panic("init exiting");
@@ -376,11 +378,13 @@ exit(int status)
     }
   }
 
-  if(!strncmp(p->name, fname, 2) && proc_time->parent_pid == p->pid) {
+  if (!strncmp(p->name, fname, sizeof(fname))) {
     printf("Yield count is %p\n", yield_count_test);
   }
+  if(!strncmp(p->name, fname, sizeof(fname)) && proc_time->parent_pid == p->pid) {
+    yield_count_test=0;
+  }
 
-  yield_count_test=0;
   begin_op();
   iput(p->cwd);
   end_op();
@@ -501,9 +505,11 @@ scheduler(void)
           // printf("Setting interval to %p for process %s\n", proc_time->avg_exec_time/2, proc_time->p_name);
           // #endif
           if(proc_time->avg_exec_time != 0) {
-            timer_scratch[0][4] = proc_time->avg_exec_time/2;
+            printf("Setting interval to %x\n", proc_time->avg_exec_time);
+            timer_scratch[0][4] = proc_time->avg_exec_time + 100000;
           }
           else {
+            printf("Using default interval for process %s\n", proc_time->p_name);
             timer_scratch[0][4] = 1000 * 1000;
           }
         }
@@ -560,7 +566,7 @@ yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
 
-  if(!strncmp(p->name, fname, 2)) {
+  if(!strncmp(p->name, fname, sizeof(fname))) {
     yield_count_test++;
   }
 
@@ -569,7 +575,7 @@ yield(void)
   #endif
 
   // profiling logic
-  printf("process %s with pid %d yielded and interval was %p\n", p->name, p->pid, timer_scratch[0][4]);
+  //printf("process %s with pid %d yielded and interval was %p\n", p->name, p->pid, timer_scratch[0][4]);
   struct proc_time *proc_time = get_proc_time(p->name);
   // set start time for new process
   if (proc_time && proc_time->p_name[0] != '\0') {
@@ -581,7 +587,7 @@ yield(void)
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
 
     //Counting yields
-    printf("run: %d\n", proc_time->num_runs);
+    //printf("run: %d\n", proc_time->num_runs);
   }
 
 

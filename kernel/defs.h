@@ -5,7 +5,7 @@
 
 extern uint64 timer_scratch[NCPU][5];
 
-#define DEFAULT_INTERVAL 1000000
+#define DEFAULT_INTERVAL 10000
 
 struct buf;
 struct context;

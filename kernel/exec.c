@@ -129,6 +129,8 @@ exec(char *path, char **argv)
       strncpy(proc_time->p_name, p->name, 16);
     }
     proc_time->parent_pid = p->pid;
+    // printf("Parent pid %d p pid %d\n", proc_time->parent_pid, p->pid);
+    proc_time->og_start_time = r_time();
     proc_time->done = false;
     proc_time->start_time = r_time();
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] = 0;
