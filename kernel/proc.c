@@ -8,6 +8,8 @@
 #include "debug.h"
 
 // #include "string.h"
+uint64 yield_count_test=0;
+char fname[] = "ls";
 
 struct cpu cpus[NCPU];
 
@@ -374,6 +376,11 @@ exit(int status)
     }
   }
 
+  if(!strncmp(p->name, fname, 2)) {
+    printf("Yield count is %p\n", yield_count_test);
+  }
+
+  yield_count_test=0;
   begin_op();
   iput(p->cwd);
   end_op();
@@ -552,6 +559,10 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+
+  if(!strncmp(p->name, fname, 2)) {
+    yield_count_test++;
+  }
 
   #ifdef VPRINT
   printf("Calling sched from yield from process %s with pid: %d\n", p->name, p->pid);
