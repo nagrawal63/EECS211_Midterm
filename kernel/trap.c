@@ -5,9 +5,13 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "debug.h"
 
 struct spinlock tickslock;
+struct spinlock intervallock;
 uint ticks;
+
+uint64 timer_scratch[NCPU][5];
 
 extern char trampoline[], uservec[], userret[];
 
@@ -166,6 +170,14 @@ clockintr()
   ticks++;
   wakeup(&ticks);
   release(&tickslock);
+  acquire (&intervallock);
+  struct proc *p = myproc();
+  uint64 *scratch = &timer_scratch[0][4];
+  struct yield_count* yield_count = get_yield_count(p->name);
+  scratch[4] = yield_count->interval;
+  release (&intervallock);
+
+
 }
 
 // check if it's an external interrupt or software interrupt,

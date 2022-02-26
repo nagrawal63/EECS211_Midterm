@@ -360,6 +360,19 @@ exit(int status)
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
+  //Add yield count
+  //Counting Yields 
+  struct yield_count* yield_count = get_yield_count(p->name);
+  printf("\n%s",p->name);
+  if (yield_count && yield_count->p_name[0] != '\0'){
+    yield_count->num_yields = 0; 
+    set_interval(yield_count);
+    printf("Process name: %s\n",yield_count->p_name);
+    printf("NUmber of Yields: %d\n",yield_count->num_yields);
+    printf("Interval Value: %d\n",yield_count->interval);
+  }
+ 
+
 
   if(p == initproc)
     panic("init exiting");
@@ -727,7 +740,7 @@ procdump(void)
   struct proc *p;
   char *state;
 
-  printf("\n");
+  //printf("\n");
   for(p = proc; p < &proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;

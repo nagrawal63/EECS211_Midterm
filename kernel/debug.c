@@ -71,9 +71,10 @@ struct yield_count* get_yield_count (const char * p_name){
 
 void set_interval(struct yield_count*p){
     uint32 count= p->num_yields;
-    uint64 cur_interval= p->interval; 
+    //uint64 cur_interval= p->interval; 
     if (count <= 5){
-        if (cur_interval == REGINTERVAL){
+        p->interval=REGINTERVAL;
+        /*if (cur_interval == REGINTERVAL){
             p->interval = LARGEINTERVAL; 
         }
         else {
@@ -83,10 +84,12 @@ void set_interval(struct yield_count*p){
             else {
                 p->interval=REGINTERVAL;
             }
-        }
+        }*/
     }
     else {
-         if (cur_interval == REGINTERVAL){
+        if (count>5 && count <10){
+            p->interval = LARGEINTERVAL;
+        /* if (cur_interval == REGINTERVAL){
             p->interval = SMALLINTERVAL; 
         }
         else {
@@ -96,6 +99,10 @@ void set_interval(struct yield_count*p){
             else {
                 p->interval=SMALLINTERVAL;
             }
+        }*/
+        }
+        else {
+            p->interval = SMALLINTERVAL;
         }
     }
 }

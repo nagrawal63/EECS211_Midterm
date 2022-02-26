@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include "defs.h"
+#include "param.h"
 
 #define PROC_NAME_SIZE  16
 #define PROC_TIMES_SIZE 32
@@ -11,6 +12,7 @@
 #define LARGEINTERVAL 2000000
 #define SMALLINTERVAL 500000
 
+extern uint64 timer_scratch[NCPU][5];
 
 // #define VPRINT 0
 

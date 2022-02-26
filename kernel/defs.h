@@ -1,6 +1,7 @@
 #pragma once
 
 #include "riscv.h"
+#include "param.h"
 
 struct buf;
 struct context;
@@ -12,6 +13,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+
+
 
 // bio.c
 void            binit(void);
