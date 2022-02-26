@@ -123,7 +123,7 @@ exec(char *path, char **argv)
   if(proc_time) {
     // TODO: Remove when the map is implemented
     if (proc_time->p_name[0] != '\0' && !proc_time->done) {
-      panic("New process running when last process is not done");
+      panic("TODO: New process running when last process with the same name is not done");
     }
     if (proc_time->p_name[0] == '\0') {
       strncpy(proc_time->p_name, p->name, 16);
