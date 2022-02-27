@@ -118,6 +118,7 @@ exec(char *path, char **argv)
   proc_freepagetable(oldpagetable, oldsz);
 
   // profiling
+  // p->num_yields=0;
   struct proc_time *proc_time = get_proc_time(p->name);
   // set start time for new process
   if(proc_time) {

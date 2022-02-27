@@ -124,6 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->num_yields=0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -500,20 +501,41 @@ scheduler(void)
             panic("Process restarted when process is done");
           }
           proc_time->start_time = r_time();
-          // #ifdef VPRINT
-          // uint64 test = 101321;
-          // printf("Setting interval to %p for process %s\n", proc_time->avg_exec_time/2, proc_time->p_name);
-          // #endif
           if(proc_time->avg_exec_time != 0) {
-            printf("Setting interval to %x\n", proc_time->avg_exec_time);
+            // printf("Setting interval to %x\n", proc_time->avg_exec_time);
             timer_scratch[0][4] = proc_time->avg_exec_time + 100000;
           }
           else {
-            printf("Using default interval for process %s\n", proc_time->p_name);
-            timer_scratch[0][4] = 1000 * 1000;
+            // printf("Using default interval for process %s\n", proc_time->p_name);
+            // timer_scratch[0][4] = 1000 * 1000;
+            printf("Num yields is %d\n", p->num_yields);
+
+            if(p->num_yields < 5) {
+             timer_scratch[0][4] = DEFAULT_INTERVAL;
+             printf("Interval set to %p when was supposed to be set to DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+            }
+            else if(p->num_yields >= 5 && p->num_yields < 10) {
+              timer_scratch[0][4] = MAX_DEFAULT_INTERVAL;
+              printf("Interval set to %p when was supposed to be set to MAX_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+            }
+            else {
+              timer_scratch[0][4] = MIN_DEFAULT_INTERVAL;
+              printf("Interval set to %p when was supposed to be set to MIN_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+            }
+            // printf("Interval set to %p\n", timer_scratch[0][4]);
           }
         }
-
+        // else if(proc_time && proc_time->p_name[0] == '\0'){
+        //   if(p->num_yields < 5) {
+        //     timer_scratch[0][4] = DEFAULT_INTERVAL;
+        //   }
+        //   else if(p->num_yields >= 5 && p->num_yields < 10) {
+        //     timer_scratch[0][4] = MAX_DEFAULT_INTERVAL;
+        //   }
+        //   else {
+        //     timer_scratch[0][4] = MIN_DEFAULT_INTERVAL;
+        //   }
+        // }
 
         swtch(&c->context, &p->context);
 
@@ -565,6 +587,8 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+
+  p->num_yields++;
 
   if(!strncmp(p->name, fname, sizeof(fname))) {
     yield_count_test++;
