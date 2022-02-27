@@ -12,9 +12,9 @@
 #define LARGEINTERVAL 2000000
 #define SMALLINTERVAL 500000
 
-extern uint64 timer_scratch[NCPU][5];
+//extern uint64 timer_scratch[NCPU][5];
 
-// #define VPRINT 0
+//#define VPRINT 1
 
 typedef uint8 bool;
 

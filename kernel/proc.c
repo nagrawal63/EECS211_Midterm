@@ -367,9 +367,9 @@ exit(int status)
   if (yield_count && yield_count->p_name[0] != '\0'){
     yield_count->num_yields = 0; 
     set_interval(yield_count);
-    printf("Process name: %s\n",yield_count->p_name);
-    printf("NUmber of Yields: %d\n",yield_count->num_yields);
-    printf("Interval Value: %d\n",yield_count->interval);
+    //printf("Process name: %s\n",yield_count->p_name);
+    printf("\n Number of Yields: %d\n",yield_count->num_yields);
+    //printf("Interval Value: %d\n",yield_count->interval);
   }
  
 
@@ -502,8 +502,16 @@ scheduler(void)
             panic("Process restarted when process is done");
           }
           proc_time->start_time = r_time();
-        }
+           uint64 *scratch = &timer_scratch[0][0];
+            struct yield_count* yield_count = get_yield_count(p->name);
+            if (yield_count){
+              printf("\nSetting Interval\n");
+              scratch[4] = yield_count->interval;
+              printf("\n %s \n",p->name);
+              }
 
+        }
+        
         swtch(&c->context, &p->context);
 
         // printf("Going to process at time: %d \n", time);
@@ -573,19 +581,23 @@ yield(void)
 
   //Counting Yields 
   struct yield_count* yield_count = get_yield_count(p->name);
-  printf("\n%s",p->name);
+  printf("\n%s\n",p->name);
   if (yield_count && yield_count->p_name[0] != '\0'){
     yield_count->num_yields += 1; 
     set_interval(yield_count);
-    printf("Process name: %s\n",yield_count->p_name);
-    printf("NUmber of Yields: %d\n",yield_count->num_yields);
-    printf("Interval Value: %d\n",yield_count->interval);
+   // printf("Process name: %s\n",yield_count->p_name);
+   // printf("NUmber of Yields: %d\n",yield_count->num_yields);
+   // printf("Interval Value: %d\n",yield_count->interval);
   }
-  else {
-    strncpy(yield_count->p_name, p->name, 16); 
-    yield_count->num_yields=1; 
-    yield_count->interval=REGINTERVAL;
+  /*else {
+      if (!((strncmp(p->name,"init",16))==0) || !((strncmp(p->name,"initcode",16))==0)){
+        strncpy(yield_count->p_name, p->name, 16); 
+        yield_count->num_yields=1; 
+        yield_count->interval=REGINTERVAL;
+        printf("\n cnt yld\n");
     }
+    
+    }*/
 
   sched();
   release(&p->lock);

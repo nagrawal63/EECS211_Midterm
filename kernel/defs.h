@@ -14,7 +14,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
-
+extern uint64 timer_scratch[NCPU][5];
 
 // bio.c
 void            binit(void);

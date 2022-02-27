@@ -11,7 +11,7 @@ struct spinlock tickslock;
 struct spinlock intervallock;
 uint ticks;
 
-uint64 timer_scratch[NCPU][5];
+//uint64 timer_scratch[NCPU][5];
 
 extern char trampoline[], uservec[], userret[];
 
@@ -168,14 +168,42 @@ clockintr()
 {
   acquire(&tickslock);
   ticks++;
+  
   wakeup(&ticks);
   release(&tickslock);
-  acquire (&intervallock);
-  struct proc *p = myproc();
-  uint64 *scratch = &timer_scratch[0][4];
-  struct yield_count* yield_count = get_yield_count(p->name);
-  scratch[4] = yield_count->interval;
-  release (&intervallock);
+  //uint64 sstatus = r_sstatus();
+ 
+  /*if(!(sstatus & SSTATUS_SPP) == 0)
+  {
+    //acquire (&intervallock);
+    struct proc *p = myproc();
+    if (p && p->pid>2){ 
+    
+    uint64 *scratch = &timer_scratch[0][0];
+    struct yield_count* yield_count = get_yield_count(p->name);
+    if (yield_count){
+      scratch[4] = yield_count->interval;
+   }
+  
+    //release (&intervallock);
+    //printf("\n timer: %d",scratch[4]);
+
+  }
+  }*/
+  /*struct proc *p = myproc();
+  if (p && p->pid>2){ 
+   // acquire (&intervallock);
+    uint64 *scratch = &timer_scratch[0][4];
+    struct yield_count* yield_count = get_yield_count(p->name);
+    if (yield_count){
+      scratch[4] = yield_count->interval;
+   }
+  
+  //release (&intervallock);
+  printf("\timer: %d",yield_count->interval);
+
+  }*/
+  
 
 
 }
