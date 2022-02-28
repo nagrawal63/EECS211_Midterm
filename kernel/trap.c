@@ -164,6 +164,7 @@ clockintr()
 {
   acquire(&tickslock);
   ticks++;
+  // printf("Tick happened\n");
   wakeup(&ticks);
   release(&tickslock);
 }

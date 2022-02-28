@@ -2,8 +2,9 @@
 #include "user/user.h"
 
 char * argv1[] = {"ls", ""};
-char * argv2[] = {"cat", "rm", ""};
-char * argv3[] = {"echo", "bleh", ""};
+char * argv2[] = {"cat", "rm > out.txt", ""};
+// char * argv3[] = {"echo", "bleh", ""};
+char * argv3[] = {"infi_loop", ""};
 
 int main(void) {
   int child_pid;

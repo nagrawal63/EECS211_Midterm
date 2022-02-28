@@ -362,11 +362,11 @@ exit(int status)
     proc_time->num_runs++;
     proc_time->total_exec_time = r_time() - proc_time->og_start_time;
     printf("Total execution time of this run of %s is %x\n", proc_time->p_name, proc_time->total_exec_time);
+    procdump();
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
   }
-  printf("process %s exited with done status as %d and avg_exec_time is %x\n", p->name, proc_time->done, proc_time->avg_exec_time);
-
+  // printf("process %s exited with done status as %d and avg_exec_time is %x\n", p->name, proc_time->done, proc_time->avg_exec_time);
   if(p == initproc)
     panic("init exiting");
 
@@ -379,12 +379,12 @@ exit(int status)
     }
   }
 
-  if (!strncmp(p->name, fname, sizeof(fname))) {
-    printf("Yield count is %p\n", yield_count_test);
-  }
-  if(!strncmp(p->name, fname, sizeof(fname)) && proc_time->parent_pid == p->pid) {
-    yield_count_test=0;
-  }
+  // if (!strncmp(p->name, fname, sizeof(fname))) {
+  //   printf("Yield count is %p\n", yield_count_test);
+  // }
+  // if(!strncmp(p->name, fname, sizeof(fname)) && proc_time->parent_pid == p->pid) {
+  //   yield_count_test=0;
+  // }
 
   begin_op();
   iput(p->cwd);
@@ -503,24 +503,46 @@ scheduler(void)
           proc_time->start_time = r_time();
           if(proc_time->avg_exec_time != 0) {
             // printf("Setting interval to %x\n", proc_time->avg_exec_time);
-            timer_scratch[0][4] = proc_time->avg_exec_time + 100000;
+
+            //Thresholding the interval to 10^6 when avg_exec_time increases more than 10^6
+            if(proc_time->avg_exec_time > THRESHOLD) {
+              // if(strncmp(p->name, "infi_loop", 16)){
+              //   printf("using default interval when avg exec time exists\n");
+              // }
+              timer_scratch[0][4] = THRESHOLD;  
+            }
+            else {            
+              // if(strncmp(p->name, "infi_loop", 16)){
+              //   printf("using avg exec time for interval\n");
+              // }
+              timer_scratch[0][4] = proc_time->avg_exec_time;
+            }
+
           }
           else {
             // printf("Using default interval for process %s\n", proc_time->p_name);
-            // timer_scratch[0][4] = 1000 * 1000;
-            printf("Num yields is %d\n", p->num_yields);
-
-            if(p->num_yields < 5) {
+            // timer_scratch[0][4] = DEFAULT_INTERVAL;
+            // printf("Num yields is %d\n", p->num_yields);
+            if(p->num_yields < MIN_YIELDS) {
+            // if(strncmp(p->name, "infi_loop", 16)){
+            //   printf("using default interval when avg exec time is zero\n");
+            // }
              timer_scratch[0][4] = DEFAULT_INTERVAL;
-             printf("Interval set to %p when was supposed to be set to DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+            //  printf("Interval set to %p when was supposed to be set to DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
-            else if(p->num_yields >= 5 && p->num_yields < 10) {
+            else if(p->num_yields >= MIN_YIELDS && p->num_yields < MAX_YIELDS) {
+              // if(strncmp(p->name, "infi_loop", 16)){
+              //   printf("using max default interval when avg exec time is zero\n");
+              // }
               timer_scratch[0][4] = MAX_DEFAULT_INTERVAL;
-              printf("Interval set to %p when was supposed to be set to MAX_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+              // printf("Interval set to %p when was supposed to be set to MAX_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
             else {
+              // if(strncmp(p->name, "infi_loop", 16)){
+              //   printf("using min default interval when avg exec time is zero\n");
+              // }
               timer_scratch[0][4] = MIN_DEFAULT_INTERVAL;
-              printf("Interval set to %p when was supposed to be set to MIN_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
+              // printf("Interval set to %p when was supposed to be set to MIN_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
             // printf("Interval set to %p\n", timer_scratch[0][4]);
           }

@@ -49,7 +49,7 @@ TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' 
 	echo "***" 1>&2; exit 1; fi)
 endif
 
-QEMU = ../qemu/build/riscv64-softmmu/qemu-system-riscv64
+QEMU = /home/rfk/qemu_dir/qemu/build/qemu-system-riscv64
 
 CC = $(TOOLPREFIX)gcc-8
 AS = $(TOOLPREFIX)gas
@@ -134,6 +134,7 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_test\
+	$U/_infi_loop\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
