@@ -610,6 +610,7 @@ yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
 
+  
   p->num_yields++;
 
   if(!strncmp(p->name, fname, sizeof(fname))) {

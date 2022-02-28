@@ -134,7 +134,11 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_test\
+	$U/_test_ls\
+	$U/_test_cat\
 	$U/_infi_loop\
+	$U/_infi_loop_cat\
+	$U/_infi_loop_ls\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
