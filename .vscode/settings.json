@@ -12,6 +12,7 @@
     "elf.h": "c",
     "file.h": "c",
     "fs.h": "c",
-    "ios": "c"
+    "ios": "c",
+    "proc.h": "c"
   }
 }

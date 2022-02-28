@@ -11,8 +11,6 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
-// in kernelvec.S, calls kerneltrap().
-void kernelvec();
 
 extern int devintr();
 
@@ -78,7 +76,8 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
-    yield();
+    if (num_runnable_procs() > 1)
+      yield();
 
   usertrapret();
 }

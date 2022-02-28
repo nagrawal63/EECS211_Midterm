@@ -25,6 +25,9 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+// assembly code in kernelvec.S for machine-mode timer interrupt.
+extern void setinterval();
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -59,6 +62,16 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
   }
+}
+
+int num_runnable_procs() {
+  int num = 0;
+  for (int i = 0; i < NPROC; i++) {
+    if (proc[i].state == RUNNABLE || proc[i].state == RUNNING) {
+      num++;
+    }
+  }
+  return num;
 }
 
 // Must be called with interrupts disabled,
@@ -361,7 +374,7 @@ exit(int status)
     proc_time->done = true;
     proc_time->num_runs++;
     proc_time->total_exec_time = r_time() - proc_time->og_start_time;
-    printf("Total execution time of this run of %s is %x\n", proc_time->p_name, proc_time->total_exec_time);
+    printf("Total execution time of this run of %s is %x and yielded %x times\n", proc_time->p_name, proc_time->total_exec_time, p->num_yields);
     procdump();
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
@@ -506,15 +519,16 @@ scheduler(void)
 
             //Thresholding the interval to 10^6 when avg_exec_time increases more than 10^6
             if(proc_time->avg_exec_time > THRESHOLD) {
-              // if(strncmp(p->name, "infi_loop", 16)){
-              //   printf("using default interval when avg exec time exists\n");
-              // }
-              timer_scratch[0][4] = THRESHOLD;
+              // struct proc *tmp_p;
+              int num_runnable = num_runnable_procs();
+              if(num_runnable == 1) {
+                timer_scratch[0][4] = THRESHOLD;
+              }
+              else {
+                timer_scratch[0][4] = DEFAULT_INTERVAL / 200;
+              }
             }
             else {
-              // if(strncmp(p->name, "infi_loop", 16)){
-              //   printf("using avg exec time for interval\n");
-              // }
               timer_scratch[0][4] = proc_time->avg_exec_time;
             }
 
@@ -546,6 +560,9 @@ scheduler(void)
             }
             // printf("Interval set to %p\n", timer_scratch[0][4]);
           }
+          w_stvec((uint64)setinterval);
+          asm volatile("ecall");
+          w_stvec((uint64)kernelvec);
         }
         // else if(proc_time && proc_time->p_name[0] == '\0'){
         //   if(p->num_yields < 5) {

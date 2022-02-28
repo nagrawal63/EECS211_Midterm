@@ -21,7 +21,7 @@ struct proc_time * get_proc_time(const struct proc * p) {
     for (int i = 0; i < PROC_TIMES_SIZE; i++) {
         if ((strncmp(p->name, proc_times[i].p_name, 16) == 0)) {
             // if another process with same name but different ancestor wants to profile, skip it
-            if (get_ancestor_pid(p) != proc_times[i].parent_pid) {
+            if (proc_times[i].parent_pid && get_ancestor_pid(p) != proc_times[i].parent_pid) {
                 return NULL;
             }
             return proc_times + i;
