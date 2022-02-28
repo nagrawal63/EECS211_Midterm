@@ -348,7 +348,7 @@ exit(int status)
   struct proc *p = myproc();
 
   /* Update proc_time variable for the process */
-  struct proc_time *proc_time = get_proc_time(p->name);
+  struct proc_time *proc_time = get_proc_time(p);
   if(proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid == p->pid) {
     // update avg_exec_time
     uint32 cur_run = proc_time->num_runs % EXEC_TIMES;
@@ -493,7 +493,7 @@ scheduler(void)
         c->proc = p;
 
         // profiling logic
-        struct proc_time *proc_time = get_proc_time(p->name);
+        struct proc_time *proc_time = get_proc_time(p);
         // set start time for new process
         if(proc_time && proc_time->p_name[0] != '\0') {
           // TODO: Remove when the map is implemented
@@ -509,9 +509,9 @@ scheduler(void)
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using default interval when avg exec time exists\n");
               // }
-              timer_scratch[0][4] = THRESHOLD;  
+              timer_scratch[0][4] = THRESHOLD;
             }
-            else {            
+            else {
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using avg exec time for interval\n");
               // }
@@ -622,7 +622,7 @@ yield(void)
 
   // profiling logic
   //printf("process %s with pid %d yielded and interval was %p\n", p->name, p->pid, timer_scratch[0][4]);
-  struct proc_time *proc_time = get_proc_time(p->name);
+  struct proc_time *proc_time = get_proc_time(p);
   // set start time for new process
   if (proc_time && proc_time->p_name[0] != '\0') {
     // TODO: Remove when the map is implemented
@@ -689,6 +689,23 @@ sleep(void *chan, struct spinlock *lk)
   #ifdef VPRINT
   printf("Calling sched from sleep from process %s with pid: %d\n", p->name, p->pid);
   #endif
+
+  // profiling logic
+  //printf("process %s with pid %d yielded and interval was %p\n", p->name, p->pid, timer_scratch[0][4]);
+  struct proc_time *proc_time = get_proc_time(p);
+  // set start time for new process
+  if (proc_time && proc_time->p_name[0] != '\0') {
+    // TODO: Remove when the map is implemented
+    if (proc_time->done && proc_time->parent_pid == p->pid) {
+      printf("Panicing process %s with pid %d\n", proc_time->p_name, p->pid);
+      panic("Process sleeping when last process is done");
+    }
+    proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
+
+    //Counting yields
+    //printf("run: %d\n", proc_time->num_runs);
+  }
+
   sched();
 
   // Tidy up.

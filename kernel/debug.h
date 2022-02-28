@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include "defs.h"
+#include "proc.h"
 
 #define PROC_NAME_SIZE  16
 #define PROC_TIMES_SIZE 32
@@ -29,6 +30,6 @@ struct proc_time {
 
 extern struct proc_time proc_times[32];
 
-struct proc_time* get_proc_time(const char * p_name);
+struct proc_time* get_proc_time(const struct proc *);
 void print_proc_times(void);
-void print_proc_time(const struct proc_time *proc_t);
+void print_proc_time(const struct proc_time *);

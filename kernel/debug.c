@@ -1,22 +1,29 @@
 #include "debug.h"
 #include "defs.h"
+#include "proc.h"
 
 #define NULL 0
 
 struct proc_time proc_times[PROC_TIMES_SIZE];
 
-struct proc_time* get_proc_time(const char * p_name) {
-    // printf("In get proc time start\n");
-    if (strncmp(p_name, "init", 16) == 0 || strncmp(p_name, "initcode", 16) == 0) {
-    //   printf("returning from init and initcode\n");
+int get_ancestor_pid(struct proc * p) {
+    struct proc * it = p;
+    while (strncmp(it->parent->name, p->name, 16) == 0) {
+        it = it->parent;
+    }
+    return it->pid;
+}
+
+struct proc_time * get_proc_time(const struct proc * p) {
+    if (!p || strncmp(p->name, "init", 16) == 0 || strncmp(p->name, "initcode", 16) == 0) {
         return NULL;
     }
-//   struct proc_time * free_proc_time = NULL;
-// printf("In get proc time\n");
-// print_proc_times();
     for (int i = 0; i < PROC_TIMES_SIZE; i++) {
-        if ((strncmp(p_name, proc_times[i].p_name, 16) == 0)) {
-            // printf("Matched |%s| with proc with name %s\n", p_name, proc_times[i].p_name);
+        if ((strncmp(p->name, proc_times[i].p_name, 16) == 0)) {
+            // if another process with same name but different ancestor wants to profile, skip it
+            if (get_ancestor_pid(p) != proc_times[i].parent_pid) {
+                return NULL;
+            }
             return proc_times + i;
         } else if (proc_times[i].p_name[0] == '\0') {
             #ifdef VPRINT
