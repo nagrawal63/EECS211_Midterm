@@ -6,8 +6,8 @@
 
 struct proc_time proc_times[PROC_TIMES_SIZE];
 
-int get_ancestor_pid(struct proc * p) {
-    struct proc * it = p;
+int get_ancestor_pid(const struct proc * p) {
+    struct proc * it = (struct proc *)p;
     while (strncmp(it->parent->name, p->name, 16) == 0) {
         it = it->parent;
     }
