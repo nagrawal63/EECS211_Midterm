@@ -8,6 +8,7 @@
 
 struct spinlock tickslock;
 uint ticks;
+uint kernel_ticks;
 
 extern char trampoline[], uservec[], userret[];
 
@@ -44,10 +45,10 @@ usertrap(void)
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
-  
+
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
   if(r_scause() == 8){
     // system call
 
@@ -76,7 +77,7 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
-    if (num_runnable_procs() > 1)
+    if (num_runnable_procs() > 1 && kernel_ticks >= kernel_timer_cmp)
       yield();
 
   usertrapret();
@@ -107,7 +108,7 @@ usertrapret(void)
 
   // set up the registers that trampoline.S's sret will use
   // to get to user space.
-  
+
   // set S Previous Privilege mode to User.
   unsigned long x = r_sstatus();
   x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
@@ -120,7 +121,7 @@ usertrapret(void)
   // tell trampoline.S the user page table to switch to.
   uint64 satp = MAKE_SATP(p->pagetable);
 
-  // jump to trampoline.S at the top of memory, which 
+  // jump to trampoline.S at the top of memory, which
   // switches to the user page table, restores user registers,
   // and switches to user mode with sret.
   uint64 fn = TRAMPOLINE + (userret - trampoline);
@@ -129,14 +130,14 @@ usertrapret(void)
 
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
-void 
+void
 kerneltrap()
 {
   int which_dev = 0;
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
   uint64 scause = r_scause();
-  
+
   if((sstatus & SSTATUS_SPP) == 0)
     panic("kerneltrap: not from supervisor mode");
   if(intr_get() != 0)
@@ -150,7 +151,8 @@ kerneltrap()
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
-    yield();
+    if (num_runnable_procs() > 1 && kernel_ticks >= kernel_timer_cmp)
+      yield();
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
@@ -162,9 +164,11 @@ void
 clockintr()
 {
   acquire(&tickslock);
-  ticks++;
-  // printf("Tick happened\n");
-  wakeup(&ticks);
+  kernel_ticks++;
+  if (kernel_ticks % SLEEP_TICK_INTERVAL == 0) {     // 10e6
+    ticks++;
+    wakeup(&ticks);
+  };
   release(&tickslock);
 }
 
@@ -207,7 +211,7 @@ devintr()
     if(cpuid() == 0){
       clockintr();
     }
-    
+
     // acknowledge the software interrupt by clearing
     // the SSIP bit in sip.
     w_sip(r_sip() & ~2);
@@ -217,4 +221,3 @@ devintr()
     return 0;
   }
 }
-

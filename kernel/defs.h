@@ -4,11 +4,17 @@
 #include "param.h"
 
 extern uint64 timer_scratch[NCPU][5];
+extern uint kernel_ticks;
+extern uint kernel_timer_cmp;
 
-#define DEFAULT_INTERVAL 1000000
-#define MAX_DEFAULT_INTERVAL 2 * 1000000
-#define MIN_DEFAULT_INTERVAL 500000
-#define THRESHOLD  DEFAULT_INTERVAL
+#define KERNEL_TICK_INTERVAL    100000    // 10e5
+#define SLEEP_TICK_INTERVAL     1000000 / KERNEL_TICK_INTERVAL    // 10e6
+#define MINIMUM_INTERVAL        10
+#define MAXIMUM_INTERVAL        300
+#define DEFAULT_YIELD_INTERVAL  200
+#define MAX_YIELD_INTERVAL      300
+#define MIN_YIELD_INTERVAL      150
+#define THRESHOLD 500
 
 #define MIN_YIELDS 10
 #define MAX_YIELDS 50

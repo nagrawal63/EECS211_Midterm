@@ -11,6 +11,8 @@
 uint64 yield_count_test=0;
 char fname[] = "ls";
 
+uint kernel_timer_cmp;
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -137,7 +139,8 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-  p->num_yields=0;
+  p->num_yields = 0;
+  p->num_sleeps = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -374,7 +377,7 @@ exit(int status)
     proc_time->done = true;
     proc_time->num_runs++;
     proc_time->total_exec_time = r_time() - proc_time->og_start_time;
-    printf("Total execution time of this run of %s is %x and yielded %x times\n", proc_time->p_name, proc_time->total_exec_time, p->num_yields);
+    printf("%s exec time: %x yields: %d times, sleeps: %d\n", proc_time->p_name, proc_time->total_exec_time, p->num_yields, p->num_sleeps);
     procdump();
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
     proc_time->exec_times[proc_time->num_runs % EXEC_TIMES] += r_time() - proc_time->start_time;
@@ -509,7 +512,6 @@ scheduler(void)
         struct proc_time *proc_time = get_proc_time(p);
         // set start time for new process
         if(proc_time && proc_time->p_name[0] != '\0') {
-          // TODO: Remove when the map is implemented
           if (proc_time->done && proc_time->parent_pid == p->pid) {
             panic("Process restarted when process is done");
           }
@@ -517,19 +519,18 @@ scheduler(void)
           if(proc_time->avg_exec_time != 0) {
             // printf("Setting interval to %x\n", proc_time->avg_exec_time);
 
-            //Thresholding the interval to 10^6 when avg_exec_time increases more than 10^6
+            // Thresholding the interval to 10^6 when avg_exec_time increases more than 10^6
             if(proc_time->avg_exec_time > THRESHOLD) {
               // struct proc *tmp_p;
               int num_runnable = num_runnable_procs();
               if(num_runnable == 1) {
-                timer_scratch[0][4] = THRESHOLD;
-              }
-              else {
-                timer_scratch[0][4] = DEFAULT_INTERVAL / 200;
+                kernel_timer_cmp = kernel_ticks + THRESHOLD;
+              } else {
+                kernel_timer_cmp = kernel_ticks + MINIMUM_INTERVAL;
               }
             }
             else {
-              timer_scratch[0][4] = proc_time->avg_exec_time;
+              kernel_timer_cmp = kernel_ticks + proc_time->avg_exec_time / KERNEL_TICK_INTERVAL;
             }
 
           }
@@ -541,28 +542,25 @@ scheduler(void)
             // if(strncmp(p->name, "infi_loop", 16)){
             //   printf("using default interval when avg exec time is zero\n");
             // }
-             timer_scratch[0][4] = DEFAULT_INTERVAL;
+              kernel_timer_cmp = kernel_ticks + DEFAULT_YIELD_INTERVAL;
             //  printf("Interval set to %p when was supposed to be set to DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
             else if(p->num_yields >= MIN_YIELDS && p->num_yields < MAX_YIELDS) {
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using max default interval when avg exec time is zero\n");
               // }
-              timer_scratch[0][4] = MAX_DEFAULT_INTERVAL;
+              kernel_timer_cmp = kernel_ticks + MAX_YIELD_INTERVAL;
               // printf("Interval set to %p when was supposed to be set to MAX_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
             else {
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using min default interval when avg exec time is zero\n");
               // }
-              timer_scratch[0][4] = MIN_DEFAULT_INTERVAL;
+              kernel_timer_cmp = kernel_ticks + MIN_YIELD_INTERVAL;
               // printf("Interval set to %p when was supposed to be set to MIN_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
             // printf("Interval set to %p\n", timer_scratch[0][4]);
           }
-          w_stvec((uint64)setinterval);
-          asm volatile("ecall");
-          w_stvec((uint64)kernelvec);
         }
         // else if(proc_time && proc_time->p_name[0] == '\0'){
         //   if(p->num_yields < 5) {
@@ -627,7 +625,7 @@ yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
 
-  
+
   p->num_yields++;
 
   if(!strncmp(p->name, fname, sizeof(fname))) {
@@ -695,6 +693,7 @@ sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
 
   acquire(&p->lock);  //DOC: sleeplock1
+  p->num_sleeps++;
   release(lk);
 
   // Go to sleep.
