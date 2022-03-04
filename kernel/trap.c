@@ -8,7 +8,7 @@
 
 struct spinlock tickslock;
 uint ticks;
-uint kernel_ticks;
+volatile uint kernel_ticks;
 
 extern char trampoline[], uservec[], userret[];
 

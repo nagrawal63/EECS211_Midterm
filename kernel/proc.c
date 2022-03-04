@@ -11,7 +11,7 @@
 uint64 yield_count_test=0;
 char fname[] = "ls";
 
-uint kernel_timer_cmp;
+volatile uint kernel_timer_cmp;
 
 struct cpu cpus[NCPU];
 
@@ -377,6 +377,7 @@ exit(int status)
     proc_time->done = true;
     proc_time->num_runs++;
     proc_time->total_exec_time = r_time() - proc_time->og_start_time;
+    proc_time->og_start_time = 0;
     printf("%s exec time: %x yields: %d times, sleeps: %d\n", proc_time->p_name, proc_time->total_exec_time, p->num_yields, p->num_sleeps);
     procdump();
   } else if (proc_time && proc_time->p_name[0] != '\0' && proc_time->parent_pid != p->pid) {
@@ -512,6 +513,9 @@ scheduler(void)
         struct proc_time *proc_time = get_proc_time(p);
         // set start time for new process
         if(proc_time && proc_time->p_name[0] != '\0') {
+          if (proc_time->og_start_time == 0) {
+            proc_time->og_start_time = r_time();
+          }
           if (proc_time->done && proc_time->parent_pid == p->pid) {
             panic("Process restarted when process is done");
           }
@@ -520,16 +524,25 @@ scheduler(void)
             // printf("Setting interval to %x\n", proc_time->avg_exec_time);
 
             // Thresholding the interval to 10^6 when avg_exec_time increases more than 10^6
-            if(proc_time->avg_exec_time > THRESHOLD) {
+            if(proc_time->avg_exec_time > THRESHOLD * KERNEL_TICK_INTERVAL) {
               // struct proc *tmp_p;
               int num_runnable = num_runnable_procs();
               if(num_runnable == 1) {
+                #ifdef IPRINT
+                printf("Interval for %s set to threshold\n", proc_time->p_name);
+                #endif
                 kernel_timer_cmp = kernel_ticks + THRESHOLD;
               } else {
+                #ifdef IPRINT
+                printf("Interval for %s set to minimum\n", proc_time->p_name);
+                #endif
                 kernel_timer_cmp = kernel_ticks + MINIMUM_INTERVAL;
               }
             }
             else {
+              #ifdef IPRINT
+              printf("Interval for %s set to avg exec time: %d\n", proc_time->p_name, proc_time->avg_exec_time / KERNEL_TICK_INTERVAL);
+              #endif
               kernel_timer_cmp = kernel_ticks + proc_time->avg_exec_time / KERNEL_TICK_INTERVAL;
             }
 
@@ -542,6 +555,9 @@ scheduler(void)
             // if(strncmp(p->name, "infi_loop", 16)){
             //   printf("using default interval when avg exec time is zero\n");
             // }
+              #ifdef IPRINT
+              printf("Interval for %s set to default yield interval\n", proc_time->p_name);
+              #endif
               kernel_timer_cmp = kernel_ticks + DEFAULT_YIELD_INTERVAL;
             //  printf("Interval set to %p when was supposed to be set to DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
@@ -549,6 +565,9 @@ scheduler(void)
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using max default interval when avg exec time is zero\n");
               // }
+              #ifdef IPRINT
+              printf("Interval for %s set to max yield interval\n", proc_time->p_name);
+              #endif
               kernel_timer_cmp = kernel_ticks + MAX_YIELD_INTERVAL;
               // printf("Interval set to %p when was supposed to be set to MAX_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
@@ -556,6 +575,9 @@ scheduler(void)
               // if(strncmp(p->name, "infi_loop", 16)){
               //   printf("using min default interval when avg exec time is zero\n");
               // }
+              #ifdef IPRINT
+              printf("Interval for %s set to min yield interval\n", proc_time->p_name);
+              #endif
               kernel_timer_cmp = kernel_ticks + MIN_YIELD_INTERVAL;
               // printf("Interval set to %p when was supposed to be set to MIN_DEFAULT_INTERVAL\n", timer_scratch[0][4]);
             }
@@ -748,6 +770,8 @@ wakeup(void *chan)
         printf("Waking up %s in wakeup()\n", p->name);
         #endif
         p->state = RUNNABLE;
+        // preempt
+        kernel_timer_cmp = kernel_ticks;
       }
       release(&p->lock);
     }

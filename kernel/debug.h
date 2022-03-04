@@ -10,6 +10,7 @@
 #define false 0
 
 // #define VPRINT 0
+// #define IPRINT 0
 
 typedef uint8 bool;
 

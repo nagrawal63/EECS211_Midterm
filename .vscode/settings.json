@@ -13,6 +13,7 @@
     "file.h": "c",
     "fs.h": "c",
     "ios": "c",
-    "proc.h": "c"
+    "proc.h": "c",
+    "debug.h": "c"
   }
 }
